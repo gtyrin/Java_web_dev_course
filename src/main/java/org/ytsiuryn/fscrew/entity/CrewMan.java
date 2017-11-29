@@ -33,4 +33,6 @@ public class CrewMan {
     @Column(name = "is_permitted")
     private boolean isPermitted;
 
+    @Column(name = "is_archive")
+    private boolean isArchive;
 }

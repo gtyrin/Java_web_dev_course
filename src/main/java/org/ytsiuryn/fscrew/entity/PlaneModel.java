@@ -35,4 +35,7 @@ public class PlaneModel {
 
     @Column(name = "max_distance")
     private int maxDistance;
+
+    @Column(name = "is_archive")
+    private boolean isArchive;
 }

@@ -8,7 +8,7 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-@RepositoryRestResource(collectionResourceRel = "people", path = "people")
+//@RepositoryRestResource(collectionResourceRel = "people", path = "people")
 public interface OperatorRepository extends PagingAndSortingRepository<Operator, Integer> {
 
     List<Operator> findByLogin(@Param("login") String login);

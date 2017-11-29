@@ -4,10 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity(name = "operator_type")
 @Data
@@ -24,4 +21,7 @@ public class OperatorType {
     public OperatorType(String name) {
         this.name = name;
     }
+
+    @Column(name = "is_archive")
+    private boolean isArchive;
 }

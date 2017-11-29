@@ -22,4 +22,7 @@ public class Operator {
 
     @ManyToOne
     private OperatorType opType;
+
+    @Column(name = "is_archive")
+    private boolean isArchive;
 }
