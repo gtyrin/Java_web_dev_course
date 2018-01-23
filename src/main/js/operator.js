@@ -1,65 +1,62 @@
 'use strict';
 
 const React = require('react');
-const ReactDOM = require('react-dom');
-const client = require('./client');
 
-class Operator extends React.Component{
+const crt = require('./common_ref_table');
+const CreateDialog = crt.CreateDialog;
+
+const STR_ATTR_ORDER = "username,password,role"
+
+class OperatorForm extends crt.CommonReferenceTablePage {
+
     render() {
         return (
-			<tr>
-				<td>{this.props.operator.login}</td>
-				<td>{this.props.operator.password}</td>
-				<td>{this.props.operator.opType}</td>
-			</tr>
+			<div className="contentPage">
+				<CreateDialog attributes={this.state.attributes}
+							  onCreate={this.onCreate}
+							  sortedAttrs={STR_ATTR_ORDER}
+							  entName={this.props.entName}/>
+				<OperatorList page={this.state.page}
+							  objects={this.state.objects}
+  						      links={this.state.links}
+ 							  pageSize={this.state.pageSize}
+ 							  attributes={this.state.attributes}
+							  entName={this.props.entName}
+							  title={this.props.title}
+							  onNavigate={this.onNavigate}
+							  onUpdate={this.onUpdate}
+							  onFroze={this.onFroze}
+							  updatePageSize={this.updatePageSize}/>
+			</div>
         )
     }
 }
 
-class OperatorList extends React.Component{
+class OperatorList extends crt.CommonReferenceDataList {
+
     render() {
-        let operators = this.props.operators.map(operator =>
-			<Operator key={operator._links.self.href} operator={operator}/>
+        let objects = this.props.objects.map(object =>
+			<Operator key={object.entity._links.self.href}
+					  obj={object}
+					  attributes={this.props.attributes}
+					  entName={this.props.entName}
+					  onUpdate={this.props.onUpdate}
+					  onFroze={this.props.onFroze}/>
         );
-        return (
-			<table>
-				<tbody>
-				<tr>
-					<th>Login</th>
-					<th>Password</th>
-					<th>Operator Type</th>
-				</tr>
-                {operators}
-				</tbody>
-			</table>
-        )
+        return super.defaultRender(objects, "Login", "Role")
     }
 }
 
 
-class App extends React.Component {
-
-	constructor(props) {
-		super(props);
-		this.state = {operators: []};
-	}
-
-	componentDidMount() {
-		client({method: 'GET', path: '/api/operators'}).done(response => {
-			this.setState({operators: response.entity._embedded.operators});
-		});
-	}
-
-	render() {
-		return (
-			<OperatorList operators={this.state.operators}/>
-		)
-	}
+class Operator extends crt.CommonReferenceObject {
+    render() {
+        return super.defaultRender(
+			STR_ATTR_ORDER,
+			{},
+            this.props.obj.entity.username,
+			this.props.obj.entity.role,
+        )
+    }
 }
 
-ReactDOM.render(
-    <App/>,
-    document.getElementById('react')
-);
-
-export default App;
+export default OperatorForm;

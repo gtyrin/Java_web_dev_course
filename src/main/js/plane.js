@@ -1,69 +1,68 @@
 'use strict';
 
-// import React from 'react';
-// import ReactDOM from 'react-dom';
 const React = require('react');
-const ReactDOM = require('react-dom');
-const client = require('./client');
 
-class Plane extends React.Component{
+const crt = require('./common_ref_table');
+const CreateDialog = crt.CreateDialog;
+
+import {planeModelCache} from './cache'
+
+const STR_ATTR_ORDER = "model,boardingNumber";
+const REL_LINKS = {'model': planeModelCache};
+
+
+class PlaneForm extends crt.CommonReferenceTablePage {
+
     render() {
         return (
-            <tr>
-                <td>{this.props.airport.name}</td>
-                <td>{this.props.airport.code}</td>
-                <td>{this.props.airport.latitude}</td>
-                <td>{this.props.airport.longitude}</td>
-            </tr>
+            <div className="contentPage">
+                <CreateDialog attributes={this.state.attributes}
+                              onCreate={this.onCreate}
+                              sortedAttrs={STR_ATTR_ORDER}
+                              relLinks={REL_LINKS}
+                              entName={this.props.entName}/>
+                <PlaneList page={this.state.page}
+                           objects={this.state.objects}
+                           links={this.state.links}
+                           pageSize={this.state.pageSize}
+                           attributes={this.state.attributes}
+                           entName={this.props.entName}
+                           title={this.props.title}
+                           onNavigate={this.onNavigate}
+                           onUpdate={this.onUpdate}
+                           onFroze={this.onFroze}
+                           updatePageSize={this.updatePageSize}/>
+            </div>
         )
     }
 }
 
-class AirportList extends React.Component{
+class PlaneList extends crt.CommonReferenceDataList {
+
     render() {
-        var airports = this.props.airports.map(airport =>
-            <Airport key={airport._links.self.href} airport={airport}/>
+        let objects = this.props.objects.map(object =>
+            <Plane key={object.entity._links.self.href}
+                   obj={object}
+                   attributes={this.props.attributes}
+                   entName={this.props.entName}
+                   onUpdate={this.props.onUpdate}
+                   onFroze={this.props.onFroze}/>
         );
-        return (
-            <table>
-                <tbody>
-                <tr>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
-                </tr>
-                {airports}
-                </tbody>
-            </table>
-        )
+        // Archive, Boarding number, Id, Model
+        return super.defaultRender(objects, "Model", "Boarding Number")
     }
 }
 
 
-class App extends React.Component {
-
-    constructor(props) {
-        super(props);
-        this.state = {airports: []};
-    }
-
-    componentDidMount() {
-        client({method: 'GET', path: '/api/airports'}).done(response => {
-            this.setState({airports: response.entity._embedded.airports});
-        });
-    }
-
+class Plane extends crt.CommonReferenceObject {
     render() {
-        return (
-            <AirportList airports={this.state.airports}/>
+        return super.defaultRender(
+            STR_ATTR_ORDER,
+            REL_LINKS,
+            REL_LINKS['model'].contentById(this.props.obj.entity.model),
+            this.props.obj.entity.boardingNumber,
         )
     }
 }
 
-ReactDOM.render(
-    <App/>,
-    document.getElementById('react')
-)
-
-export default App;
+export default PlaneForm;

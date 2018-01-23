@@ -1,76 +1,66 @@
 'use strict';
 
-// import React from 'react';
-// import ReactDOM from 'react-dom';
-
 const React = require('react');
-const ReactDOM = require('react-dom');
-const client = require('./client');
 
-class PlaneModel extends React.Component{
+const crt = require('./common_ref_table');
+const CreateDialog = crt.CreateDialog;
+
+const STR_ATTR_ORDER = "name,pilots,navigators,boardConductors,radioOperators,passengers";
+
+
+class PlaneModelForm extends crt.CommonReferenceTablePage {
+
     render() {
         return (
-            <tr>
-                <td>{this.props.planeModel.name}</td>
-                <td>{this.props.planeModel.pilots}</td>
-                <td>{this.props.planeModel.navigators}</td>
-                <td>{this.props.planeModel.boardConductors}</td>
-                <td>{this.props.planeModel.radioOperators}</td>
-                <td>{this.props.planeModel.passengers}</td>
-                <td>{this.props.planeModel.maxDistance}</td>
-            </tr>
+            <div className="contentPage">
+                <CreateDialog attributes={this.state.attributes}
+                              onCreate={this.onCreate}
+                              sortedAttrs={STR_ATTR_ORDER}
+                              entName={this.props.entName}/>
+                <PlaneModelList page={this.state.page}
+                                objects={this.state.objects}
+                                links={this.state.links}
+                                pageSize={this.state.pageSize}
+                                attributes={this.state.attributes}
+                                entName={this.props.entName}
+                                title={this.props.title}
+                                onNavigate={this.onNavigate}
+                                onUpdate={this.onUpdate}
+                                onFroze={this.onFroze}
+                                updatePageSize={this.updatePageSize}/>
+            </div>
         )
     }
 }
 
-class PlaneModelList extends React.Component{
+class PlaneModelList extends crt.CommonReferenceDataList {
     render() {
-        let planeModels = this.props.planeModels.map(planeModel =>
-            <PlaneModel key={planeModel._links.self.href} planeModel={planeModel}/>
+        let objects = this.props.objects.map(object =>
+            <PlaneModel key={object.entity._links.self.href}
+                        obj={object}
+                        attributes={this.props.attributes}
+                        entName={this.props.entName}
+                        title={this.props.title}
+                        onUpdate={this.props.onUpdate}
+                        onFroze={this.props.onFroze} />
         );
-        return (
-            <table>
-                <tbody>
-                <tr>
-                    <th>Name</th>
-                    <th>Pilots</th>
-                    <th>Navigators</th>
-                    <th>Board Conductors</th>
-                    <th>Radio Operators</th>
-                    <th>Passengers</th>
-                    <th>Max Distance</th>
-                </tr>
-                {planeModels}
-                </tbody>
-            </table>
-        )
+        // Archive, Board conductors, Id, Name, Navigators, Passengers, Pilots, Radio operators
+        return super.defaultRender(objects, "Name", "Pilots", "Navigators", "Board conductors", "Radio operators")
     }
 }
 
-
-class App extends React.Component {
-
-    constructor(props) {
-        super(props);
-        this.state = {planeModels: []};
-    }
-
-    componentDidMount() {
-        client({method: 'GET', path: '/api/planeModels'}).done(response => {
-            this.setState({planeModels: response.entity._embedded.planeModels});
-        });
-    }
-
+class PlaneModel extends crt.CommonReferenceObject {
     render() {
-        return (
-            <PlaneModelList planeModels={this.state.planeModels}/>
+        return super.defaultRender(
+                STR_ATTR_ORDER,
+                {},
+                this.props.obj.entity.name,
+                this.props.obj.entity.pilots,
+                this.props.obj.entity.navigators,
+                this.props.obj.entity.boardConductors,
+                this.props.obj.entity.radioOperators
         )
     }
 }
 
-ReactDOM.render(
-    <App/>,
-    document.getElementById('react')
-);
-
-export default App;
+export default PlaneModelForm;
