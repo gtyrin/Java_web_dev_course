@@ -1,15 +1,70 @@
+A.linkButton {
+    color: white;
+}
+
+A.linkButton:visited {
+    color: white;
+}
+
+label.field {
+    display:block;
+}
+
 input.field {
-    width: 90%;
+    width: 99%;
+    display:block;
+    clear:left;
 }
 
 table {
+    font-family: "Lucida Sans Unicode", "Lucida Grande", "Sans-Serif";
+    font-size: 14px;
+    background: white;
+    max-width: 70%;
     border-collapse: collapse;
+    text-align: left;
 }
 
-td, th {
-    border: 1px solid #999;
-    padding: 0.5rem;
-    text-align: left;
+th {
+    font-weight: normal;
+    color: #039;
+    border-bottom: 2px solid #6678b1;
+    padding: 10px 8px;
+}
+
+td {
+    border-bottom: 1px solid #ccc;
+    color: #669;
+    padding: 9px 8px;
+    transition: .3s linear;
+    white-space: nowrap;
+}
+
+td.frozen {
+    border-bottom: 1px solid #ccc;
+    color: #669;
+    padding: 9px 8px;
+    transition: .3s linear;
+    white-space: nowrap;
+    background: #cccccc;
+}
+
+tr:hover td {background: #e8edff;}
+
+
+ul {
+    font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+    font-size: 14px;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul li:hover {background: #e8edff;}
+
+.contentPage {
+    margin-left: 10px;
+    margin-top: 20px;
 }
 
 /*Classes for creating dialogs*/
@@ -22,11 +77,7 @@ td, th {
     bottom: 0;
     left: 0;
     background: rgba(0,0,0,0.8);
-    z-index: 99999;
     opacity:0;
-    -webkit-transition: opacity 400ms ease-in;
-    -moz-transition: opacity 400ms ease-in;
-    transition: opacity 400ms ease-in;
     pointer-events: none;
 }
 
@@ -39,12 +90,12 @@ td, th {
     width: 400px;
     position: relative;
     margin: 10% auto;
-    padding: 5px 20px 13px 20px;
-    border-radius: 10px;
-    background: #fff;
-    background: -moz-linear-gradient(#fff, #999);
-    background: -webkit-linear-gradient(#fff, #999);
-    background: -o-linear-gradient(#fff, #999);
+    padding: 10px 20px 13px 20px;
+    background: #ccc;
+    position: fixed; top: 20%; left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
 }
 
 .close {
@@ -67,3 +118,46 @@ td, th {
 }
 
 .close:hover { background: #00d9ff; }
+
+.refNavBar {
+    float: left;
+    line-height: 20px;
+    font-size: 12px;
+    margin-top: 10px;
+    margin-right: 40px;
+}
+
+.linkButton {
+    text-decoration:none;
+    padding: 7px 10px;
+}
+
+.insertButton {
+    background:#96ed90;
+}
+
+/*.insertButton A {
+    color: white;
+}*/
+.updateButton {
+    background:#adbdd8;
+}
+
+.frozeButton {
+    background:#b0b4ba;
+}
+
+.deleteButton {
+    background:#b0b4ba;
+}
+
+#navPanel {
+    float: left;
+    width: 120px;
+    padding: 10px 14px;
+}
+
+#sideBar {
+    float: left;
+    padding: 7px 50px;
+}

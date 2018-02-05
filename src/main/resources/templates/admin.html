@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head lang="en">
+    <meta charset="UTF-8"/>
+    <title>Flight Crew</title>
+    <link rel="stylesheet" href="/main.css" />
+    <link rel="stylesheet" href="/antd.css" />
+</head>
+<body>
+
+    <div id="navPanel">
+        <p th:inline="text">Logged: <b>[[${#httpServletRequest.remoteUser}]]</b></p>
+        <form th:action="@{/logout}" method="post">
+            <input type="submit" value="Sign Out"/>
+        </form>
+        <hr/>
+        <p/>
+        <ul id="menu">
+            <li>Operators</li>
+            <li>Airports</li>
+            <li>Plane Models</li>
+            <li>Planes</li>
+            <li>Flights</li>
+            <li>Positions</li>
+            <li>Employees</li>
+        </ul>
+    </div>
+    <div id="sideBar"></div>
+
+    <script src="built/bundle.js"></script>
+
+</body>
+</html>

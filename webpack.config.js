@@ -1,10 +1,19 @@
 var path = require('path');
 
+var node_dir = __dirname + '/node_modules';
+
 module.exports = {
     entry: './src/main/js/app.js',
     devtool: 'sourcemaps',
     cache: true,
-    debug: true,
+    resolve: {
+        alias: {
+            'stompjs': node_dir + '/stompjs/lib/stomp.js',
+        }
+    },
+    node: {
+       fs: "empty"
+    },
     output: {
         path: __dirname,
         filename: './src/main/resources/static/built/bundle.js'
@@ -17,7 +26,7 @@ module.exports = {
                 loader: 'babel-loader',
                 query: {
                     cacheDirectory: true,
-                    presets: ['es2015', 'react']
+                    presets: ['react', 'es2015']
                 }
             }
         ]

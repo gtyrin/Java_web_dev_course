@@ -1,10 +1,11 @@
-/*
-Классы формирование кеша, используемого в создании combobox формы редактирования для полей с Foreign Key.
+/**
+ * Классы формирование кеша, используемого в создании combobox формы редактирования для полей с Foreign Key.
  */
 
 'use strict';
 
 // TODO Генерировать сигналы завершения формирования конкретного кеша
+// TODO Основной кеш не отсортирован
 
 const pluralize = require('pluralize');
 const when = require('when');
@@ -12,7 +13,9 @@ const when = require('when');
 const client = require('./client');
 const follow = require('./follow'); // function to hop multiple links by "rel"
 const stompClient = require('./websocket-listener');
-const utils = require('./utils')
+const utils = require('./utils');
+
+const env = require('./const');
 
 const root = '/api';
 
@@ -27,29 +30,47 @@ function compare(a,b) {
 }
 
 
+/**
+ * Родительский класс кешей объектов сущностей НСИ.
+ */
 class ReferenceCache {
 
     constructor(entName,
-                fldOptions={'id':['id'], 'content': ['name']},
-                extraOptions = {'dependencies': [], 'host': 'http://localhost', 'port': 8080}) {
+                fldOptions={id:['id'], content: ['name']},
+                extraOptions = {dependencies: [], host: env.host, port: env.port}) {
         this.entName = entName;
         this.idFldNames = fldOptions.id || ['id'];
         this.contentFldNames = fldOptions.content || ['name'];
+        this.nativeFldNames = {};
+        this.isDependencesFormed = false;
         this.dependencies = {};
         extraOptions.dependencies.map(depName => {
             this.dependencies[depName] = undefined;
         })
         this.children = {};
+        this.parents = [];
         this.cache = {};
         this.altCache = []; // альтернативный кеш
         this.size = 0;
+        this.isCreated = false;
         this.pluralName = pluralize(entName);
         this.addDependency = this.addDependency.bind(this)
         this.create = this.create.bind(this);
+        this.addItem = this.addItem.bind(this);
+        this.updateItem = this.updateItem.bind(this);
+        this.frozeItem = this.frozeItem.bind(this);
     }
 
+    // TODO dependencies должен роддерживаться как список для первоначального запуска, так и словарь (обработанные данные)
     init(dependencies=[]) {
-        this.registerListeners();
+        // this.registerListeners();
+        this.contentFldNames.map(fldName => {
+            if (fldName.includes("->")) {
+                this.nativeFldNames[fldName] = fldName.split("->")[0];
+            } else {
+                this.nativeFldNames[fldName] = fldName;
+            }
+        })
         follow(client, root, [
             {rel: this.pluralName}]
         ).done(objCollection => {
@@ -58,54 +79,74 @@ class ReferenceCache {
         })
     }
 
+    /**
+     * Подписка на обработку событий по созданию,изменению и удалению объектов.
+     */
     registerListeners() {
         let upperCaseName = utils.capitalize(this.entName);
         stompClient.register([
-            {route: '/topic/new' + upperCaseName, callback: this.addItem()},
-            {route: '/topic/update' + upperCaseName, callback: this.updateItem()},
-            {route: '/topic/delete' + upperCaseName, callback: this.deleteItem()}
+            {route: '/topic/new' + upperCaseName, callback: this.addItem},
+            {route: '/topic/update' + upperCaseName, callback: this.updateItem},
+            {route: '/topic/froze' + upperCaseName, callback: this.frozeItem},
         ]);
     }
 
-    // Возврат полей содержимого по id для "сырой" обработки (на случай, если содержание включает объекты)
-    rawContentById(id) {
-        return Object.values(this.cache[id]);
-    }
-
-    // Возврат полей содержимого по id для текстового представления
+    /**
+     * Возврат полей содержимого по id для текстового представления
+     */
     contentById(id) {
-        return Object.values(this.cache[id]).join(" ");
-        // for (let elem in this.cache) {
-        //     if (elem.id === id) {
-        //         return elem.content
-        //     }
-        // }
+        if (this.isCreated) {
+            return this.cache[id].content;
+        } else {
+            let ret = [];
+            for (let i = 0; i < this.contentFldNames.length; i++) {
+                ret.push(this.cache[id][this.nativeFldNames[this.contentFldNames[i]]]);
+            }
+            return ret.join(' ');
+        }
     }
 
-    // Список всех значений кеша. Поля содержимого склеиваются через пробел.
-    values() {
-        let ret = [];
-        for (let id in this.cache) {
-            ret.push(this.contentById(id));
+    idByValue(val) {
+        let ret = -1;
+        for(let i=0; i<this.altCache.length; i++) {
+            if (this.altCache[i].content === val) {
+                ret = this.altCache[i].id;
+                break;
+            }
         }
         return ret;
     }
 
-    // Добавление нового элемента.
+    /**
+     * Добавление нового элемента.
+     * @param message message.body имеет значение типа "/api/crewman/3"
+     */
     addItem(message) {
+        this.create();
+        console.log("Cache addItem");
     }
 
-    // Изменение элемента.
+    /**
+     * Изменение элемента.
+     */
     updateItem(message) {
-
+        this.create();
+        console.log("Cache updateItem");
     }
 
-    // Удаление элемента
-    deleteItem(message) {
-
+    /**
+     * Выведение элемента из ввода для новых объектов.
+     */
+    // TODO Вызывается дважды и невилирует новую установку.
+    frozeItem(message) {
+        let id = message.body.split('/').slice(-1);
+        this.cache[id].archive = !this.cache[id].archive;
+        console.log("Cache frozeItem");
     }
 
-    /* Проверка соблюдения всех зависимостей перед разрешением на создание кеша. */
+    /**
+     * Проверка соблюдения всех зависимостей перед разрешением на создание кеша.
+     */
     canCreateOrUpdate() {
         let ret = true;
         for (let depClassName in this.dependencies) {
@@ -117,7 +158,9 @@ class ReferenceCache {
         return ret;
     }
 
-    // Добавление зависимости.
+    /**
+     * Добавление зависимости.
+     */
     addDependency(child) {
         this.dependencies[child.constructor.name] = child;
         if (this.canCreateOrUpdate()) {
@@ -125,18 +168,20 @@ class ReferenceCache {
         }
     }
 
-    /* Первоначальное формирование кеша
-       Игнорируются записи, у которых is_archive = 1
-       Зависимые поля вида 'spec->crewSpec.name' также достаются */
+    /**
+     * Первоначальное формирование кеша
+     * Игнорируются записи, у которых is_archive = 1
+     * Зависимые поля вида 'spec->crewSpec.name' также достаются
+     */
     create(dependencies=[]) {
+        this.cache = {};
+        this.altCache = [];
+        this.isCreated = false;
         follow(client, root, [
             {rel: this.pluralName, params: {size: this.size}}]
         ).then(objCollection => {
             let id, relId, nativeFldName, cacheObjName, content, elems;
             objCollection.entity._embedded[this.pluralName].map(obj => {
-                if ('archive' in obj && obj.archive) {
-                    return;
-                }
                 id = "";
                 this.idFldNames.map(fldName => {
                     if (fldName === "id") {
@@ -145,16 +190,9 @@ class ReferenceCache {
                         id += obj[fldName]
                     }
                 });
-                this.cache[id] = {}
-                let _fldName
+                this.cache[id] = {archive: obj.archive}
                 this.contentFldNames.map(fldName => {
-                    if (fldName.includes("->")) {
-                        elems = fldName.split("->");
-                        _fldName = elems[0]
-                    } else {
-                        _fldName = fldName
-                    }
-                    this.cache[id][_fldName] = undefined
+                    this.cache[id][this.nativeFldNames[fldName]] = undefined
                 })
                 this.contentFldNames.map(fldName => {
                     if (fldName.includes("->")) {
@@ -168,120 +206,83 @@ class ReferenceCache {
                 });
             })
         }).done(() => {
-            // console.log(this.cache)
             for (let id in this.cache) {
-                this.altCache.push({"id": parseInt(id), "content": Object.values(this.cache[id]).join(' ')});
+                this.altCache.push({id: parseInt(id), content: this.contentById(id), archive: this.cache[id].archive});
             }
             this.altCache.sort(compare)
-            console.log(this.altCache);
-            dependencies.map(cacheObj => {
-                cacheObj.addDependency(this);
-            })
+            this.cache = {}
+            this.altCache.map(r => {
+                this.cache[r.id] = r;
+            });
+            this.isCreated = true;
+            if (this.isDependencesFormed) {
+                this.parents.map(cacheObj => {
+                    cacheObj.init();
+                })
+            } else {
+                dependencies.map(cacheObj => {
+                    cacheObj.addDependency(this);
+                })
+                this.parents = dependencies;
+                this.isDependencesFormed = true;
+            }
         })
     }
 }
 
+/**
+ * Кеш объектов сущности "аэропорт".
+ */
 class AirportCache extends ReferenceCache {
     constructor() {
         super('airport')
     }
 }
 
+/**
+ * Кеш объектов сущности "член экипажа".
+ */
 class EmployeeCache extends ReferenceCache {
     constructor(extraOptions) {
         super('crewman',
-              {'content': ['spec->PositionCache', 'firstName', 'midName', 'lastName']},
+              {content: ['spec->PositionCache', 'firstName', 'midName', 'lastName']},
             extraOptions)
     }
 }
 
-class FlightCache extends ReferenceCache {
-    constructor(extraOptions) {
-        super('flight',
-             {'content': ['departureTime', 'departureAirport->AirportCache', 'landingAirport->AirportCache',
-                 'number']},
-            extraOptions)
-    }
-}
-
+/**
+ * Кеш объектов сущности "самолет".
+ */
 class PlaneCache extends ReferenceCache {
     constructor(extraOptions) {
-        super('plane', {'content': ['model->PlaneModelCache', 'boardingNumber']},
+        super('plane', {content: ['model->PlaneModelCache', 'boardingNumber']},
             extraOptions)
     }
 }
 
+/**
+ * Кеш объектов сущности "модель самолета".
+ */
 class PlaneModelCache extends ReferenceCache {
     constructor() {
         super('planeModel')
     }
 }
 
+/**
+ * Кеш объектов сущности "специальность члена экипажа".
+ */
 class PositionCache extends ReferenceCache {
     constructor() {
         super('crewSpec')
     }
 }
 
-class FilteredCache extends ReferenceCache {
-
-    constructor(entName, fldOptions, extraOptions) {
-        super(entName, fldOptions, extraOptions);
-        // this.filterURL = extraOptions.filterURL;
-        this.ids = [];
-    }
-
-    init(dependencies=[]) {
-        this.registerListeners();
-        follow(client, root, [
-            {rel: this.filterURL}]
-        ).done(objCollection => {
-            for(let obj in objCollection) {
-                this.ids.push(obj.id);
-            }
-            this.size = objCollection.entity.page.totalElements;
-            this.create(dependencies);
-        })
-    }
-
-    create(dependencies) {
-        super.create(dependencies)
-        let ids = Object.keys(this.cache);
-        for(let id in ids) {
-            if (!(id in this.ids)) {
-                // TODO: id заменить на перечень полей, представляющих (возможно) составной идентификатор записи.
-                // TODO или убрать поддержку других ключей кроме суррогатных.
-                delete this.cache.id;
-            }
-        }
-    }
-}
-
-/* Отбор записей кеша самолетов за текущую дату (прошли техосмотр). */
-// Сделать выборку самолетов за дату и отобрать те записи из кеша самолетов, что соответствуют 1й выборке, полю plane.
-class PlaneAdmissionCache extends FilteredCache {
-    constructor(extraOptions) {
-        super('planeAdmission', {'content': ['model->PlaneModelCache', 'boardingNumber']},
-            extraOptions)
-    }
-}
-
-/* Отбор членов экипажа за текущую дату (прошли медосмотр). */
-// Сделать выборку сотрудников за дату и отобрать те записи из кеша, что соответствуют 1й выборке, полю crewMan.
-class CrewManAdmissionCache extends FilteredCache {
-    constructor(extraOptions) {
-        super('crewmanAdmission',
-            {'content': ['spec->PositionCache', 'firstName', 'midName', 'lastName']},
-            extraOptions)
-    }
-}
-
 export const employeeCache = new EmployeeCache({'dependencies': ['PositionCache']});
-export const flightCache = new FlightCache({'dependencies': ['AirportCache']});
 export const planeCache = new PlaneCache({'dependencies': ['PlaneModelCache']});
 
 export const airportCache = new AirportCache();
-airportCache.init([flightCache]);
+airportCache.init();
 
 export const planeModelCache = new PlaneModelCache()
 planeModelCache.init([planeCache]);
@@ -291,10 +292,6 @@ positionCache.init([employeeCache]);
 
 airportCache.registerListeners();
 employeeCache.registerListeners();
-flightCache.registerListeners();
 planeCache.registerListeners();
 planeModelCache.registerListeners();
 positionCache.registerListeners();
-
-export const planeAdmissionCache = new PlaneAdmissionCache();
-export const crewManAdmissionCache = new CrewManAdmissionCache();

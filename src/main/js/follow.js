@@ -19,15 +19,16 @@ module.exports = function follow(api, rootPath, relArray) {
 				return [];
 			}
 
+            let relURL = rel in (response.entity._links) ? response.entity._links[rel].href : rel;
 			if (typeof arrayItem === 'string') {
 				return api({
 					method: 'GET',
-					path: response.entity._links[rel].href
+					path: relURL
 				});
 			} else {
 				return api({
 					method: 'GET',
-					path: response.entity._links[rel].href,
+					path: relURL,
 					params: arrayItem.params
 				});
 			}
